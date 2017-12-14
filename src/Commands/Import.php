@@ -175,8 +175,8 @@ class Import extends Command
             // Import the data from backup
             $this->databaseManager->beginTransaction();
             $this->databaseManager->statement('SET SQL_MODE="ALLOW_INVALID_DATES"');
-            $this->databaseManager->statement('SET GLOBAL net_buffer_length=100000000');
-            $this->databaseManager->statement('SET GLOBAL max_allowed_packet=100000000000');
+            $this->databaseManager->statement('SET GLOBAL net_buffer_length=100K');
+            $this->databaseManager->statement('SET GLOBAL max_allowed_packet=500M');
             $this->databaseManager->unprepared($this->filesystem->disk($this->disk)->get($fullPathToRestore));
             $this->databaseManager->commit();
 

@@ -90,11 +90,13 @@ class Import extends Command
         // Turn the filename's into an array
         $filesToImport = $this->getFilesToImport($versions, $versionToRestore);
 
+        $tag = $this->getTagFromChosenVersion($versions, $versionToRestore);
+
         // Progress bar for user feedback
         $bar = $this->output->createProgressBar(count($filesToImport));
 
         // Loop through each file and import it
-        $this->importFiles($filesToImport, $folderToImport, $bar);
+        $this->importFiles($filesToImport, $folderToImport, $tag, $bar);
 
         // Finish the bar
         $bar->finish();
@@ -152,7 +154,7 @@ class Import extends Command
         }
     }
 
-    private function importFiles($filesToImport, $folderToImport, $bar)
+    private function importFiles($filesToImport, $folderToImport, $tag, $bar)
     {
         foreach ($filesToImport as $fileToImport) {
             // Build the full path
@@ -162,7 +164,7 @@ class Import extends Command
             $tableToDrop = substr(
                 $fileToImport,
                 0,
-                strpos($fileToImport, '_' . config('backup-manager.tag'))
+                strpos($fileToImport, '_' . $tag)
             );
 
             // Drop the table if it exists
@@ -171,10 +173,24 @@ class Import extends Command
             $this->databaseManager->commit();
 
             // Import the data from backup
+            $this->databaseManager->beginTransaction();
+            $this->databaseManager->statement('SET SQL_MODE="ALLOW_INVALID_DATES"');
+            $this->databaseManager->statement('SET GLOBAL net_buffer_length=100000000');
+            $this->databaseManager->statement('SET GLOBAL max_allowed_packet=100000000000');
             $this->databaseManager->unprepared($this->filesystem->disk($this->disk)->get($fullPathToRestore));
+            $this->databaseManager->commit();
 
             // Increment the bar
             $bar->advance();
         };
+    }
+
+    private function getTagFromChosenVersion($versions, $versionToRestore)
+    {
+        foreach ($versions as $version) {
+            if ($version['version'] === (int)$versionToRestore) {
+                return $version['tag'];
+            }
+        }
     }
 }

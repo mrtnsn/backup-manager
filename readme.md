@@ -1,4 +1,8 @@
 # 💼 Backup Manager for Laravel
+
+[![Latest Version on Packagist](https://img.shields.io/packagist/v/mrtnsn/backup-manager.svg?style=flat-square)](https://packagist.org/packages/mrtnsn/backup-manager)
+[![Total Downloads](https://img.shields.io/packagist/dt/mrtnsn/backup-manager.svg?style=flat-square)](https://packagist.org/packages/mrtnsn/backup-manager)
+
 Easy to use backup manager for Laravel.
 
 **Features**

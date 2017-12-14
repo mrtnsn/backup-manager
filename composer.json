@@ -1,0 +1,53 @@
+{
+  "name": "mrtnsn/backup-manager",
+  "description": "Backup manager for Laravel",
+  "type": "package",
+  "license": "MIT",
+  "keywords": [
+    "backup",
+    "database",
+    "laravel-backup",
+    "manager",
+    "import",
+    "export",
+    "mysql"
+  ],
+  "authors": [
+    {
+      "name": "Christoffer Martinsen",
+      "email": "christoffermartinsen@gmail.com"
+    }
+  ],
+  "require": {
+    "php": "^7.0",
+    "illuminate/contracts": "~5.1.0||~5.2.0||~5.3.0||~5.4.0||~5.5.0",
+    "illuminate/support": "~5.1.0||~5.2.0||~5.3.0||~5.4.0||~5.5.0",
+    "illuminate/filesystem": "~5.1.0||~5.2.0||~5.3.0||~5.4.0||~5.5.0",
+    "illuminate/database": "~5.1.0||~5.2.0||~5.3.0||~5.4.0||~5.5.0",
+    "illuminate/console": "~5.1.0||~5.2.0||~5.3.0||~5.4.0||~5.5.0",
+    "league/flysystem": "^1.0.27",
+    "symfony/process": "~2.7||~3.0"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^6.2",
+    "mockery/mockery": "^1.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "Mrtnsn\\BackupManager\\": "src/"
+    }
+  },
+  "scripts": {
+    "test": "vendor/bin/phpunit"
+  },
+  "suggest": {
+    "league/flysystem-aws-s3-v3": "Allows you to export and import backups on AWS S3"
+  },
+  "extra": {
+    "laravel": {
+      "providers": [
+        "Mrtnsn\\BackupManager\\BackupManagerProvider"
+      ]
+    }
+  }
+}

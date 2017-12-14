@@ -10,8 +10,6 @@ Easy to use backup manager for Laravel.
 ## Installation
 
 ### Composer
-Remember to check which version you should install.
-
 ```
 composer require mrtnsn/backup-manager
 ```
@@ -87,6 +85,7 @@ php artisan backup-manager:import
 |tag|`env('APP_ENV')`|Tag is added after the table name and before the version (e.g. {table}_{tag}_1, {table}_{tag}_2, etc.)|
 |overwrite|`false`|If false the version will be incremented for each new save within the same sub folder. If true only version 1 will exist and each new save within the same sub folder will overwrite the content.|
 |visibility|private|Visibility of the file, recommended to leave this as private. For more info take a look at the flysystem API: https://flysystem.thephpleague.com/api/|
+|timestampFormat|`Y-m-d H:i:s`|This format is used for displaying the timestamps of imports|
 |ignoreTables|`[]`|Tables you want to ignore from the backup.|
 
 ## Roadmap

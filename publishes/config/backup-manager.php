@@ -35,5 +35,8 @@ return [
     // The package divides each tables data into chunks, this is maximal chunk size in MB
     // 50 MB is a sensible default, but this may wary depending on your server setup
     // Must be an integer, float or something that handles typecasting to float
-    'chunkSize' => 5
+    'chunkSize' => 50,
+
+    // If you need to set some global configuration at runtime for your database, this is the place to do it.
+    'mysqlGlobalSettings' => []
 ];

@@ -40,12 +40,14 @@ The package exposes two artisan commands, one for `export` and one for `import`.
 
 #### Export
 Export will use your current credentials and config to export the database
-to your desired location.
+to your desired location. This is done by creating a schema file from the database, then
+each table is inspected and split into chunks. Each chunk and the schema is uploaded to
+the desired location.
 
 This command gives no feedback since it's meant to be run from the scheduler.
 This prevent filling up log files with unnecessary data.
 
-The command can be execute manually with a custom tag, this can be usefull if multiple developers
+The command can be execute manually with a custom tag, this can be useful if multiple developers
 are testing different databases on a staging server and need to quickly change between them.
 
 ##### Running it from schedule (app/Console/Kernel.php)
@@ -91,6 +93,8 @@ php artisan backup-manager:import
 |visibility|private|Visibility of the file, recommended to leave this as private. For more info take a look at the flysystem API: https://flysystem.thephpleague.com/api/|
 |timestampFormat|`Y-m-d H:i:s`|This format is used for displaying the timestamps of imports|
 |ignoreTables|`[]`|Tables you want to ignore from the backup.|
+|chunkSize|`50`|How many MB each chunk of the data can be|
+|mysqlGlobalSettings|`[]`|Here you can set global MySQL config if need, e.g. `SET SQL_MODE="ALLOW_INVALID_DATES"`|
 
 ## Roadmap
 - Tests 

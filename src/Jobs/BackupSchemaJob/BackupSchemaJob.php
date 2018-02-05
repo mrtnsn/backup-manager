@@ -1,14 +1,13 @@
 <?php
 
-namespace Mrtnsn\BackupManager\Jobs;
+namespace Mrtnsn\BackupManager\Jobs\BackupSchemaJob;
 
 use Illuminate\Contracts\Filesystem\Factory;
 use Symfony\Component\Process\Process;
 use Mrtnsn\BackupManager\Exceptions\ProcessException;
 
-trait BackupTableJob
+trait BackupSchemaJob
 {
-    private $tableName;
     private $version;
     private $tag;
 
@@ -16,9 +15,8 @@ trait BackupTableJob
     private $subFolder;
     private $disk;
 
-    public function __construct($tableName, $version, $tag)
+    public function __construct($version, $tag)
     {
-        $this->tableName = $tableName;
         $this->version = $version;
         $this->tag = $tag ?: config('backup-manager.tag');
 
@@ -55,11 +53,10 @@ trait BackupTableJob
     private function buildMysqlDumpCommand()
     {
         return 'mysqldump ' . config('database.connections.mysql.database') .
-            ' ' . $this->tableName .
             ' --host=' . config('database.connections.mysql.host') .
             ' --user=' . config('database.connections.mysql.username') .
             ' --password=' . config('database.connections.mysql.password') .
-            ' --compact';
+            ' --no-data';
     }
 
     private function removeAllWhitespace($string)
@@ -79,7 +76,7 @@ trait BackupTableJob
 
     private function buildBackupName()
     {
-        return $this->tableName . '_' . $this->tag . '_' . $this->version;
+        return config('database.connections.mysql.database') . '_schema_' . $this->tag . '_' . $this->version;
     }
 
     private function buildFileExtension()

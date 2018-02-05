@@ -1,6 +1,6 @@
 <?php
 
-namespace Mrtnsn\BackupManager\Jobs;
+namespace Mrtnsn\BackupManager\Jobs\BackupTableJob;
 
 use App\Jobs\Job;
 use Illuminate\Contracts\Bus\SelfHandling;

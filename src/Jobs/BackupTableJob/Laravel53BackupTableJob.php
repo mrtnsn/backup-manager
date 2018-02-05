@@ -1,6 +1,6 @@
 <?php
 
-namespace Mrtnsn\BackupManager\Jobs;
+namespace Mrtnsn\BackupManager\Jobs\BackupTableJob;
 
 use Illuminate\Bus\Queueable;
 use Illuminate\Queue\SerializesModels;

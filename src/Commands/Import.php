@@ -138,27 +138,9 @@ class Import extends Command
                 // Modify the collection to only include the data we need
                 return [
                     'version' => $key,
-                    'schema' => $file->first(function ($fileKey, $file) use ($key, $fileChunks) {
-                        return $file['filename'] === config('database.connections.mysql.database') .
-                            '_schema_' .
-                            $fileChunks[count($fileChunks) - 2] .
-                            '_' .
-                            $key;
-                    })['filename'],
-                    'filenames' => $file
-                        ->map(function ($file) {
-                            return $file['filename'];
-                        })
-                        ->filter(function ($file) use ($key, $fileChunks) {
-                            return $file !== config('database.connections.mysql.database') .
-                                '_schema_' .
-                                $fileChunks[count($fileChunks) - 2] .
-                                '_' .
-                                $key;
-                        }),
-                    'modified' => $file->avg(function ($file) {
-                        return $file['timestamp'];
-                    }),
+                    'schema' => $this->getSchema($file, $key, $fileChunks),
+                    'filenames' => $this->getFilenames($file, $key, $fileChunks),
+                    'modified' => $this->getModified($file),
                     'tag' => $fileChunks[count($fileChunks) - 2]
                 ];
             });
@@ -217,5 +199,38 @@ class Import extends Command
                 return $version['schema'];
             }
         }
+    }
+
+    private function getSchema($file, $key, $fileChunks)
+    {
+        return $file->filter(function ($file) use ($key, $fileChunks) {
+            return $file['filename'] === config('database.connections.mysql.database') .
+                '_schema_' .
+                $fileChunks[count($fileChunks) - 2] .
+                '_' .
+                $key;
+        })->first()['filename'];
+    }
+
+    private function getFilenames($file, $key, $fileChunks)
+    {
+        return $file
+            ->map(function ($file) {
+                return $file['filename'];
+            })
+            ->filter(function ($file) use ($key, $fileChunks) {
+                return $file !== config('database.connections.mysql.database') .
+                    '_schema_' .
+                    $fileChunks[count($fileChunks) - 2] .
+                    '_' .
+                    $key;
+            });
+    }
+
+    private function getModified($file)
+    {
+        return $file->avg(function ($file) {
+            return $file['timestamp'];
+        });
     }
 }

@@ -10,6 +10,12 @@ Easy to use backup manager for Laravel.
 - Integration with Laravels queue and filesystem
 - Support for multiple Laravel versions (`5.1 => 5.5`)
 - Each table is stored in it's own file
+- Chunking of large tables
+
+## :fire: Breaking changes
+
+In version `2.0.0` we changed how the backup files are created meaning that backups created
+before `2.0.0` can't be automatically imported. They can still be manually imported.
 
 ## Installation
 

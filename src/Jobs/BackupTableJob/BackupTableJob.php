@@ -1,6 +1,6 @@
 <?php
 
-namespace Mrtnsn\BackupManager\Jobs;
+namespace Mrtnsn\BackupManager\Jobs\BackupTableJob;
 
 use Illuminate\Contracts\Filesystem\Factory;
 use Symfony\Component\Process\Process;
@@ -11,16 +11,20 @@ trait BackupTableJob
     private $tableName;
     private $version;
     private $tag;
+    private $limitFromRow;
+    private $limitNumberOfRows;
 
     private $rootFolder;
     private $subFolder;
     private $disk;
 
-    public function __construct($tableName, $version, $tag)
+    public function __construct($tableName, $version, $tag, $limitFromRow = null, $limitNumberOfRows = null)
     {
         $this->tableName = $tableName;
         $this->version = $version;
         $this->tag = $tag ?: config('backup-manager.tag');
+        $this->limitFromRow = $limitFromRow;
+        $this->limitNumberOfRows = $limitNumberOfRows;
 
         $this->rootFolder = config('backup-manager.rootFolder');
         $this->subFolder = config('backup-manager.subFolder');
@@ -54,12 +58,21 @@ trait BackupTableJob
 
     private function buildMysqlDumpCommand()
     {
-        return 'mysqldump ' . config('database.connections.mysql.database') .
+        $cmd = 'mysqldump ' . config('database.connections.mysql.database') .
             ' ' . $this->tableName .
             ' --host=' . config('database.connections.mysql.host') .
             ' --user=' . config('database.connections.mysql.username') .
             ' --password=' . config('database.connections.mysql.password') .
+            ' --skip-extended-insert' .
+            ' --no-create-info' .
+            ' --no-create-db' .
             ' --compact';
+
+        if (!is_null($this->limitFromRow) and !is_null($this->limitNumberOfRows)) {
+            $cmd .= ' --where="1 limit ' . $this->limitFromRow . ', ' . $this->limitNumberOfRows . '"';
+        }
+
+        return $cmd;
     }
 
     private function removeAllWhitespace($string)
@@ -79,7 +92,15 @@ trait BackupTableJob
 
     private function buildBackupName()
     {
-        return $this->tableName . '_' . $this->tag . '_' . $this->version;
+        $backupName = $this->tableName;
+
+        if (!is_null($this->limitFromRow) and !is_null($this->limitNumberOfRows)) {
+            $backupName .= '_' . $this->limitFromRow . '-' . $this->limitNumberOfRows;
+        }
+
+        $backupName .= '_' . $this->tag . '_' . $this->version;
+
+        return $backupName;
     }
 
     private function buildFileExtension()

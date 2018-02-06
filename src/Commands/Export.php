@@ -15,6 +15,7 @@ class Export extends Command
     private $databaseManager;
     private $filesystem;
     private $disk;
+    private $chunkSize;
 
     public function __construct(DatabaseManager $databaseManager, Factory $filesystem)
     {
@@ -22,6 +23,7 @@ class Export extends Command
         $this->filesystem = $filesystem;
 
         $this->disk = config('backup-manager.disk');
+        $this->chunkSize = (float) config('backup-manager.chunkSize');
 
         parent::__construct();
     }
@@ -35,27 +37,60 @@ class Export extends Command
         $tables = $this->databaseManager->select($sql);
 
         // Check if a version.txt file exists, if not create it.
-        // Retrive the version form the file and increment it, then save the file.
-        $version = $this->getAndUpdateVersion();
+        // Retrieve the version form the file and increment it, then save the file.
+        $version = (int) $this->getAndUpdateVersion();
+
+        list($major, $minor) = explode('.', app()->version());
+        $backupTableClass = '\Mrtnsn\BackupManager\Jobs\BackupTableJob\Laravel' . $major . $minor . 'BackupTableJob';
+        $backupSchemaClass = '\Mrtnsn\BackupManager\Jobs\BackupSchemaJob\Laravel' . $major . $minor . 'BackupSchemaJob';
+
+        dispatch(new $backupSchemaClass($version, $this->option('tag')));
 
         // Loop through each of the tables and pass it to the BackupTableJob, this job should queue by default.
         foreach ($tables as $key => $table) {
-            list($major, $minor) = explode('.', app()->version());
-            $className = '\Mrtnsn\BackupManager\Jobs\Laravel' . $major . $minor . 'BackupTableJob';
+            // Check if the table is larger than the defined chunk size
+            if ((float) $table->table_size > $this->chunkSize) {
+                // Calculates the size per row in the database by dividing the size by the number of rows
+                $sizePerRow = $table->table_size / $table->table_rows;
+                // Calculates how many rows fit within a given chunk
+                $numberOfRowsPerChunk = (int) floor($this->chunkSize / $sizePerRow);
+                // Calculates the number of chunks
+                $numberOfChunks = (int) ceil($table->table_rows / $numberOfRowsPerChunk);
 
-            dispatch(new $className($table->table_name, (int) $version, $this->option('tag')));
+                // Iterate over $numberOfChunks
+                for ($i = 1; $i <= $numberOfChunks; $i++) {
+                    // Calculate the first parameter of MYSQL LIMIT X, Y
+                    $limitFromRow = ($i - 1) * $numberOfRowsPerChunk;
+                    // Set the number of rows to collect, the second parameter of MYSQL LIMIT X, Y
+                    $limitNumberOfRows = $numberOfRowsPerChunk;
+
+                    // Dispatch the job corresponding to the correct Laravel version
+                    dispatch(new $backupTableClass(
+                        $table->table_name,
+                        $version,
+                        $this->option('tag'),
+                        $limitFromRow,
+                        $limitNumberOfRows
+                    ));
+                }
+            } else {
+                // Dispatch the job corresponding to the correct Laravel version
+                dispatch(new $backupTableClass($table->table_name, $version, $this->option('tag')));
+            }
         }
     }
 
     private function buildSqlQuery()
     {
         // Basic select to get the table_name's from the database
-        $sql = 'SELECT 
-             table_name 
-            FROM 
-             information_schema.tables
-            WHERE 
-             table_schema = DATABASE()';
+        $sql = 'SELECT
+            table_name, 
+            table_rows,
+            round(((data_length + index_length) / 1024 / 1024), 2) `table_size` 
+          FROM 
+            information_schema.tables 
+          WHERE 
+            table_schema = DATABASE()';
 
         // If there are some table to ignore append it to the sql query
         if (config('backup-manager.ignoreTables')) {

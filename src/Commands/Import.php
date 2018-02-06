@@ -90,13 +90,15 @@ class Import extends Command
         // Turn the filename's into an array
         $filesToImport = $this->getFilesToImport($versions, $versionToRestore);
 
-        $tag = $this->getTagFromChosenVersion($versions, $versionToRestore);
+        $schema = $this->getSchemaFromChosenVersion($versions, $versionToRestore);
+
+        $this->importSchema($schema, $folderToImport);
 
         // Progress bar for user feedback
         $bar = $this->output->createProgressBar(count($filesToImport));
 
         // Loop through each file and import it
-        $this->importFiles($filesToImport, $folderToImport, $tag, $bar);
+        $this->importFiles($filesToImport, $folderToImport, $bar);
 
         // Finish the bar
         $bar->finish();
@@ -120,6 +122,10 @@ class Import extends Command
                 // Remove the version.txt file that we generate
                 return $file['filename'] !== 'version';
             })
+            ->filter(function ($file) {
+                // Remove empty files
+                return $file['size'] !== 0;
+            })
             ->groupBy(function ($file) {
                 // Group by the version number with should be the last entry when exploded on _
                 $fileChunks = explode('_', $file['filename']);
@@ -132,12 +138,9 @@ class Import extends Command
                 // Modify the collection to only include the data we need
                 return [
                     'version' => $key,
-                    'filenames' => $file->map(function ($file) {
-                        return $file['filename'];
-                    }),
-                    'modified' => $file->avg(function ($file) {
-                        return $file['timestamp'];
-                    }),
+                    'schema' => $this->getSchema($file, $key, $fileChunks),
+                    'filenames' => $this->getFilenames($file, $key, $fileChunks),
+                    'modified' => $this->getModified($file),
                     'tag' => $fileChunks[count($fileChunks) - 2]
                 ];
             });
@@ -154,30 +157,34 @@ class Import extends Command
         }
     }
 
-    private function importFiles($filesToImport, $folderToImport, $tag, $bar)
+    private function importSchema($schema, $folderToImport)
+    {
+        // Build the full path
+        $fullPathToRestore = $folderToImport . '/' . $schema . '.sql';
+
+        $this->databaseManager->beginTransaction();
+        $this->databaseManager->unprepared($this->filesystem->disk($this->disk)->get($fullPathToRestore));
+        $this->databaseManager->commit();
+    }
+
+    private function importFiles($filesToImport, $folderToImport, $bar)
     {
         foreach ($filesToImport as $fileToImport) {
             // Build the full path
             $fullPathToRestore = $folderToImport . '/' . $fileToImport . '.sql';
 
-            // Find the table name we're going to drop
-            $tableToDrop = substr(
-                $fileToImport,
-                0,
-                strpos($fileToImport, '_' . $tag)
-            );
-
-            // Drop the table if it exists
+            // Begin a database transaction
             $this->databaseManager->beginTransaction();
-            $this->databaseManager->statement("DROP TABLE IF EXISTS $tableToDrop");
-            $this->databaseManager->commit();
 
-            // Import the data from backup
-            $this->databaseManager->beginTransaction();
-            $this->databaseManager->statement('SET SQL_MODE="ALLOW_INVALID_DATES"');
-            $this->databaseManager->statement('SET GLOBAL net_buffer_length=100K');
-            $this->databaseManager->statement('SET GLOBAL max_allowed_packet=500M');
+            // Set the user defined global settings for mysql
+            foreach (config('backup-manager.mysqlGlobalSettings') as $globalSetting) {
+                $this->databaseManager->statement($globalSetting);
+            }
+
+            // Insert the data from the file
             $this->databaseManager->unprepared($this->filesystem->disk($this->disk)->get($fullPathToRestore));
+
+            // Commit the changes to the database
             $this->databaseManager->commit();
 
             // Increment the bar
@@ -185,12 +192,45 @@ class Import extends Command
         };
     }
 
-    private function getTagFromChosenVersion($versions, $versionToRestore)
+    private function getSchemaFromChosenVersion($versions, $versionToRestore)
     {
         foreach ($versions as $version) {
-            if ($version['version'] === (int)$versionToRestore) {
-                return $version['tag'];
+            if ($version['version'] === (int) $versionToRestore) {
+                return $version['schema'];
             }
         }
+    }
+
+    private function getSchema($file, $key, $fileChunks)
+    {
+        return $file->filter(function ($file) use ($key, $fileChunks) {
+            return $file['filename'] === config('database.connections.mysql.database') .
+                '_schema_' .
+                $fileChunks[count($fileChunks) - 2] .
+                '_' .
+                $key;
+        })->first()['filename'];
+    }
+
+    private function getFilenames($file, $key, $fileChunks)
+    {
+        return $file
+            ->map(function ($file) {
+                return $file['filename'];
+            })
+            ->filter(function ($file) use ($key, $fileChunks) {
+                return $file !== config('database.connections.mysql.database') .
+                    '_schema_' .
+                    $fileChunks[count($fileChunks) - 2] .
+                    '_' .
+                    $key;
+            });
+    }
+
+    private function getModified($file)
+    {
+        return $file->avg(function ($file) {
+            return $file['timestamp'];
+        });
     }
 }

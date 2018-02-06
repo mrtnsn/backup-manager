@@ -31,4 +31,12 @@ return [
     // Tables you want to ignore from the backup.
     // Every table you list here will be ignored and will be left untouched by the import.
     'ignoreTables' => [],
+
+    // The package divides each tables data into chunks, this is maximal chunk size in MB
+    // 50 MB is a sensible default, but this may wary depending on your server setup
+    // Must be an integer, float or something that handles typecasting to float
+    'chunkSize' => 50,
+
+    // If you need to set some global configuration at runtime for your database, this is the place to do it.
+    'mysqlGlobalSettings' => []
 ];

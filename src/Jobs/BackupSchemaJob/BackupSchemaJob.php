@@ -52,11 +52,17 @@ trait BackupSchemaJob
 
     private function buildMysqlDumpCommand()
     {
-        return 'mysqldump ' . config('database.connections.mysql.database') .
+        $cmd = 'mysqldump ' . config('database.connections.mysql.database') .
             ' --host=' . config('database.connections.mysql.host') .
             ' --user=' . config('database.connections.mysql.username') .
             ' --password=' . config('database.connections.mysql.password') .
             ' --no-data';
+
+        foreach (config('backup-manager.ignoreTables') as $ignoreTable) {
+            $cmd .= ' --ignore-table=' . config('database.connections.mysql.database') . '.' . $ignoreTable;
+        }
+
+        return $cmd;
     }
 
     private function removeAllWhitespace($string)
